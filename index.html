@@ -1068,6 +1068,9 @@
         </div>
     </div>
 
+    <!-- Hidden input for camera -->
+    <input type="file" accept="image/*" capture="environment" id="camera-input" style="display:none">
+
     <script>
         // Данные для графика нарушений
         const violationData = {
@@ -1135,6 +1138,23 @@
 
         let currentSector = null;
         let editingRow = null;
+        let currentEquipment = null;
+
+        // Event listener for camera input
+        document.getElementById('camera-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && currentEquipment) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const base64 = event.target.result;
+                    localStorage.setItem('equipment-photo-' + currentEquipment.id, base64);
+                    // Update the img src
+                    const img = document.querySelector('.equipment-photo');
+                    if (img) img.src = base64;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
 
         // Навигация по разделам
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -1270,6 +1290,11 @@
             `;
         }
 
+        function getEquipmentPhotoSrc(eq) {
+            const saved = localStorage.getItem('equipment-photo-' + eq.id);
+            return saved || eq.img;
+        }
+
         function openSector(name) {
             currentSector = name;
             const s = sectors.find(sec => sec.name === name);
@@ -1317,6 +1342,7 @@
         }
 
         function openEquipment(eq) {
+            currentEquipment = eq;
             const container = document.getElementById('sectors-map-content');
             container.innerHTML = `
                 <div class="container-inner">
@@ -1330,9 +1356,16 @@
                         <p><b>Последняя проверка:</b> 15.10.2023</p>
                     </div>
                     <h3>Фото оборудования</h3>
-                    <img src="${eq.img}" class="equipment-photo" alt="оборудование">
+                    <img src="${getEquipmentPhotoSrc(eq)}" class="equipment-photo" alt="оборудование">
+                    <button id="add-photo-btn" class="btn btn-primary" style="margin-top: 10px;"><i class="fas fa-camera"></i> Добавить фото</button>
                 </div>
             `;
+
+            // Add event listener for add photo button
+            const addPhotoBtn = document.getElementById('add-photo-btn');
+            addPhotoBtn.addEventListener('click', () => {
+                document.getElementById('camera-input').click();
+            });
         }
 
         // Функция для отображения графика нарушений
