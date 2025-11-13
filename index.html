@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Все ваши стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -789,12 +790,32 @@
             { name: 'D', kpi: 4.2, color: '#27ae60', x: '55%', y: '60%', w: '35%', h: '30%', description: 'Логистика и отгрузка.' },
         ];
 
-        // Данные оборудования
+        // Данные оборудования с локальными путями к изображениям
         const equipmentList = [
-            { id: 1, name: 'Оборудование №1', specs: 'Мощность: 15 кВт, Производительность: 120 кг/ч', img: 'https://th.bing.com/th/id/R.1f0d42fa11dda13e8b1cfbf676f75b97?rik=gbPNhIGtO7%2bi%2bw&riu=http%3a%2f%2fsun9-6.userapi.com%2fimpg%2fgb6MSXtN4KiX2nwWWiQ1j4QJwrv7EB3tbvmllQ%2fMI41eEN85P0.jpg&ehk=p4ilH9KD42IGGY6W3%2fgc635HyE4a4eGXdVZ5o%2fGZSEU%3d&risl=&pid=ImgRaw&r=0' },
-            { id: 2, name: 'Оборудование №2', specs: 'Мощность: 12 кВт, Производительность: 90 кг/ч', img: 'https://th.bing.com/th/id/OIP.VI8J4_3qjvZQhIjHiDJ9gwHaE8?pid=ImgDet&rs=1' },
-            { id: 3, name: 'Оборудование №3', specs: 'Мощность: 20 кВт, Производительность: 150 кг/ч', img: 'https://th.bing.com/th/id/OIP.eAk8IqujXJKcJZ2YHKb0PwHaE8?pid=ImgDet&rs=1' },
-            { id: 4, name: 'Оборудование №4', specs: 'Мощность: 18 кВт, Производительность: 130 кг/ч', img: 'https://th.bing.com/th/id/OIP.2mJ7DHGEiK4mNEuxHgM1pgHaE8?pid=ImgDet&rs=1' },
+            { 
+                id: 1, 
+                name: 'Оборудование №1', 
+                specs: 'Мощность: 15 кВт, Производительность: 120 кг/ч', 
+                img: 'equipment/photoA.png' 
+            },
+            { 
+                id: 2, 
+                name: 'Оборудование №2', 
+                specs: 'Мощность: 12 кВт, Производительность: 90 кг/ч', 
+                img: 'equipment/photoA.png' 
+            },
+            { 
+                id: 3, 
+                name: 'Оборудование №3', 
+                specs: 'Мощность: 20 кВт, Производительность: 150 кг/ч', 
+                img: 'equipment/photoA.png' 
+            },
+            { 
+                id: 4, 
+                name: 'Оборудование №4', 
+                specs: 'Мощность: 18 кВт, Производительность: 130 кг/ч', 
+                img: 'equipment/photoA.png' 
+            },
         ];
 
         let currentSector = null;
@@ -932,7 +953,5 @@
             renderMainMap();
         });
     </script>
-
-    <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
