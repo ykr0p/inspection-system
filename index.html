@@ -791,168 +791,176 @@
         ];
 
         // Данные оборудования с локальными путями к изображениям
-        const equipmentList = [
-            { 
-                id: 1, 
-                name: 'Оборудование №1', 
-                specs: 'Мощность: 15 кВт, Производительность: 120 кг/ч', 
-                img: 'equipment/photoA.png' 
-            },
-            { 
-                id: 2, 
-                name: 'Оборудование №2', 
-                specs: 'Мощность: 12 кВт, Производительность: 90 кг/ч', 
-                img: 'equipment/photoB.png' 
-            },
-            { 
-                id: 3, 
-                name: 'Оборудование №3', 
-                specs: 'Мощность: 20 кВт, Производительность: 150 кг/ч', 
-                img: 'equipment/photoC.png' 
-            },
-            { 
-                id: 4, 
-                name: 'Оборудование №4', 
-                specs: 'Мощность: 18 кВт, Производительность: 130 кг/ч', 
-                img: 'equipment/photoD.png' 
-            },
-        ];
+const equipmentList = [
+    { 
+        id: 1, 
+        name: 'Сортировочная машина', 
+        specs: 'Мощность: 15 кВт, Производительность: 120 кг/ч', 
+        img: 'equipment/photoA.png' 
+    },
+    { 
+        id: 2, 
+        name: 'Упаковочный автомат', 
+        specs: 'Мощность: 12 кВт, Производительность: 90 кг/ч', 
+        img: 'equipment/photoB.png' 
+    },
+    { 
+        id: 3, 
+        name: 'Контрольный сканер', 
+        specs: 'Мощность: 20 кВт, Производительность: 150 кг/ч', 
+        img: 'equipment/photoC.png' 
+    },
+    { 
+        id: 4, 
+        name: 'Транспортный конвейер', 
+        specs: 'Мощность: 18 кВт, Производительность: 130 кг/ч', 
+        img: 'equipment/photoD.png' 
+    },
+];
 
-        let currentSector = null;
+let currentSector = null;
 
-        // Навигация по разделам
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function() {
-                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                this.classList.add('active');
+// Навигация по разделам
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', function() {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
 
-                const view = this.getAttribute('data-view');
-                document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
-                document.getElementById(view).classList.add('active');
+        const view = this.getAttribute('data-view');
+        document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
+        document.getElementById(view).classList.add('active');
 
-                const titles = {
-                    dashboard: 'Дашборд проверок',
-                    checklists: 'Чек-листы',
-                    schedule: 'График проверок',
-                    reporting: 'Отчетность',
-                    'sectors-map': 'Карта секторов'
-                };
-                document.getElementById('page-title').textContent = titles[view];
+        const titles = {
+            dashboard: 'Дашборд проверок',
+            checklists: 'Чек-листы',
+            schedule: 'График проверок',
+            reporting: 'Отчетность',
+            'sectors-map': 'Карта секторов'
+        };
+        document.getElementById('page-title').textContent = titles[view];
 
-                // Если переходим в карту секторов, отображаем основную карту
-                if (view === 'sectors-map') {
-                    renderMainMap();
-                }
-            });
-        });
-
-        // Обработка чекбоксов в чек-листе
-        document.querySelectorAll('.checklist-checkbox input').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const item = this.closest('.checklist-item');
-                if (this.checked) {
-                    item.style.opacity = '0.7';
-                } else {
-                    item.style.opacity = '1';
-                }
-            });
-        });
-
-        // Имитация загрузки данных
-        setTimeout(() => {
-            const dashboardStatCards = document.querySelectorAll('#dashboard .stat-card');
-            if (dashboardStatCards.length > 0) {
-                dashboardStatCards[1].querySelector('.stat-value').textContent = '92%';
-                dashboardStatCards[3].querySelector('.stat-value').textContent = '+8%';
-            }
-        }, 1500);
-
-        // Функции для работы с картой секторов
-        function renderMainMap() {
-            currentSector = null;
-            const container = document.getElementById('sectors-map-content');
-            container.innerHTML = `
-                <div class="container-inner">
-                    <h1>Карта секторов производства</h1>
-                    <div class="map">
-                        ${sectors.map(s => `
-                            <div class="sector"
-                                style="left:${s.x}; top:${s.y}; width:${s.w}; height:${s.h}; background:${s.color};"
-                                onclick="openSector('${s.name}')">
-                                Сектор ${s.name}<br>KPI: ${s.kpi}
-                            </div>
-                        `).join('')}
-                    </div>
-                    <p style="text-align: center; margin-top: 20px; color: #666;">
-                        Нажмите на сектор для просмотра детальной информации и оборудования
-                    </p>
-                </div>
-            `;
-        }
-
-        function openSector(name) {
-            currentSector = name;
-            const s = sectors.find(sec => sec.name === name);
-            const container = document.getElementById('sectors-map-content');
-            container.innerHTML = `
-                <div class="container-inner">
-                    <button class="back-btn" onclick="renderMainMap()">
-                        <i class="fas fa-arrow-left"></i> Назад к карте
-                    </button>
-                    <h1>Сектор ${s.name}</h1>
-                    <div class="stats-cards">
-                        <div class="stat-card">
-                            <i class="fas fa-chart-line"></i>
-                            <div class="stat-value">${s.kpi}</div>
-                            <div class="stat-label">KPI сектора</div>
-                        </div>
-                        <div class="stat-card">
-                            <i class="fas fa-check-circle"></i>
-                            <div class="stat-value">95%</div>
-                            <div class="stat-label">Выполнение плана</div>
-                        </div>
-                    </div>
-                    <p><b>Описание:</b> ${s.description}</p>
-                    <h3 style="margin-top: 30px;">Карта оборудования</h3>
-                    <div class="equipment-map" id="equipment-map"></div>
-                </div>
-            `;
-
-            const map = document.getElementById('equipment-map');
-            for (let i = 0; i < 12; i++) {
-                const dot = document.createElement('div');
-                dot.className = 'dot';
-                dot.style.left = Math.random() * 90 + '%';
-                dot.style.top = Math.random() * 85 + '%';
-                dot.onclick = () => openEquipment(equipmentList[i % equipmentList.length]);
-                map.appendChild(dot);
-            }
-        }
-
-        function openEquipment(eq) {
-            const container = document.getElementById('sectors-map-content');
-            container.innerHTML = `
-                <div class="container-inner">
-                    <button class="back-btn" onclick="openSector('${currentSector}')">
-                        <i class="fas fa-arrow-left"></i> Назад к сектору ${currentSector}
-                    </button>
-                    <h1>${eq.name}</h1>
-                    <div class="equipment-details">
-                        <p><b>Характеристики:</b> ${eq.specs}</p>
-                        <p><b>Статус:</b> <span class="status-badge status-completed">Активен</span></p>
-                        <p><b>Последняя проверка:</b> 15.10.2023</p>
-                    </div>
-                    <h3>Фото оборудования</h3>
-                    <img src="${eq.img}" class="equipment-photo" alt="оборудование">
-                </div>
-            `;
-        }
-
-        // Инициализация карты секторов при загрузке
-        document.addEventListener('DOMContentLoaded', function() {
+        // Если переходим в карту секторов, отображаем основную карту
+        if (view === 'sectors-map') {
             renderMainMap();
-        });
+        }
+    });
+});
+
+// Обработка чекбоксов в чек-листе
+document.querySelectorAll('.checklist-checkbox input').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const item = this.closest('.checklist-item');
+        if (this.checked) {
+            item.style.opacity = '0.7';
+        } else {
+            item.style.opacity = '1';
+        }
+    });
+});
+
+// Имитация загрузки данных
+setTimeout(() => {
+    const dashboardStatCards = document.querySelectorAll('#dashboard .stat-card');
+    if (dashboardStatCards.length > 0) {
+        dashboardStatCards[1].querySelector('.stat-value').textContent = '92%';
+        dashboardStatCards[3].querySelector('.stat-value').textContent = '+8%';
+    }
+}, 1500);
+
+// Функции для работы с картой секторов
+function renderMainMap() {
+    currentSector = null;
+    const container = document.getElementById('sectors-map-content');
+    container.innerHTML = `
+        <div class="container-inner">
+            <h1>Карта секторов производства</h1>
+            <div class="map">
+                ${sectors.map(s => `
+                    <div class="sector"
+                        style="left:${s.x}; top:${s.y}; width:${s.w}; height:${s.h}; background:${s.color};"
+                        onclick="openSector('${s.name}')">
+                        Сектор ${s.name}<br>KPI: ${s.kpi}
+                    </div>
+                `).join('')}
+            </div>
+            <p style="text-align: center; margin-top: 20px; color: #666;">
+                Нажмите на сектор для просмотра детальной информации и оборудования
+            </p>
+        </div>
+    `;
+}
+
+function openSector(name) {
+    currentSector = name;
+    const s = sectors.find(sec => sec.name === name);
+    const container = document.getElementById('sectors-map-content');
+    container.innerHTML = `
+        <div class="container-inner">
+            <button class="back-btn" onclick="renderMainMap()">
+                <i class="fas fa-arrow-left"></i> Назад к карте
+            </button>
+            <h1>Сектор ${s.name}</h1>
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <i class="fas fa-chart-line"></i>
+                    <div class="stat-value">${s.kpi}</div>
+                    <div class="stat-label">KPI сектора</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-check-circle"></i>
+                    <div class="stat-value">95%</div>
+                    <div class="stat-label">Выполнение плана</div>
+                </div>
+            </div>
+            <p><b>Описание:</b> ${s.description}</p>
+            <h3 style="margin-top: 30px;">Карта оборудования</h3>
+            <div class="equipment-map" id="equipment-map"></div>
+        </div>
+    `;
+
+    const map = document.getElementById('equipment-map');
+    
+    // Создаем случайное распределение оборудования
+    const equipmentCount = 8;
+    for (let i = 0; i < equipmentCount; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        dot.style.left = Math.random() * 90 + '%';
+        dot.style.top = Math.random() * 85 + '%';
+        
+        // Случайно выбираем оборудование из списка
+        const randomEquipment = equipmentList[Math.floor(Math.random() * equipmentList.length)];
+        dot.onclick = () => openEquipment(randomEquipment);
+        
+        map.appendChild(dot);
+    }
+}
+
+function openEquipment(eq) {
+    const container = document.getElementById('sectors-map-content');
+    container.innerHTML = `
+        <div class="container-inner">
+            <button class="back-btn" onclick="openSector('${currentSector}')">
+                <i class="fas fa-arrow-left"></i> Назад к сектору ${currentSector}
+            </button>
+            <h1>${eq.name}</h1>
+            <div class="equipment-details">
+                <p><b>Характеристики:</b> ${eq.specs}</p>
+                <p><b>Статус:</b> <span class="status-badge status-completed">Активен</span></p>
+                <p><b>Последняя проверка:</b> 15.10.2023</p>
+            </div>
+            <h3>Фото оборудования</h3>
+            <img src="${eq.img}" class="equipment-photo" alt="оборудование">
+        </div>
+    `;
+}
+
+// Инициализация карты секторов при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    renderMainMap();
+});
     </script>
 </body>
 </html>
+
 
