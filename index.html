@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Все ваши стили остаются без изменений */
+        /* Все предыдущие стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -489,6 +489,123 @@
             border-radius: 10px;
         }
 
+        /* Стили для модального окна */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: translateY(-20px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: white;
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e5e5;
+        }
+
         @media (max-width: 992px) {
             .dashboard {
                 flex-direction: column;
@@ -578,7 +695,7 @@
                 <div class="section">
                     <div class="section-header">
                         <h3 class="section-title">Предстоящие проверки</h3>
-                        <button class="btn btn-primary"><i class="fas fa-plus"></i> Новая проверка</button>
+                        <button class="btn btn-primary" id="new-inspection-btn"><i class="fas fa-plus"></i> Новая проверка</button>
                     </div>
                     <div class="table-responsive">
                         <table>
@@ -591,7 +708,7 @@
                                     <th>Действия</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="inspections-table-body">
                                 <tr>
                                     <td>Инструментальный участок</td>
                                     <td>15.10.2023</td>
@@ -781,6 +898,78 @@
         </div>
     </div>
 
+    <!-- Модальное окно для создания новой проверки -->
+    <div class="modal-overlay" id="new-inspection-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Создание новой проверки</h3>
+                <button class="modal-close" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="new-inspection-form">
+                    <div class="form-group">
+                        <label class="form-label">Название проверки</label>
+                        <input type="text" class="form-control" id="inspection-name" placeholder="Введите название проверки" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Участок</label>
+                        <select class="form-select" id="inspection-sector" required>
+                            <option value="">Выберите участок</option>
+                            <option value="Инструментальный участок">Инструментальный участок</option>
+                            <option value="Сборный участок">Сборный участок</option>
+                            <option value="Участок производства СКПГ">Участок производства СКПГ</option>
+                            <option value="Сектор A">Сектор A</option>
+                            <option value="Сектор B">Сектор B</option>
+                            <option value="Сектор C">Сектор C</option>
+                            <option value="Сектор D">Сектор D</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Дата проверки</label>
+                        <input type="date" class="form-control" id="inspection-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Проверяющий</label>
+                        <select class="form-select" id="inspection-inspector" required>
+                            <option value="">Выберите проверяющего</option>
+                            <option value="Иванов Иван">Иванов Иван</option>
+                            <option value="Петрова А.С.">Петрова А.С.</option>
+                            <option value="Сидоров В.К.">Сидоров В.К.</option>
+                            <option value="Козлова Е.В.">Козлова Е.В.</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Чек-лист</label>
+                        <select class="form-select" id="inspection-checklist" required>
+                            <option value="">Выберите чек-лист</option>
+                            <option value="Общая проверка оборудования">Общая проверка оборудования</option>
+                            <option value="Проверка безопасности">Проверка безопасности</option>
+                            <option value="Проверка чистоты">Проверка чистоты</option>
+                            <option value="Проверка документации">Проверка документации</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Приоритет</label>
+                        <select class="form-select" id="inspection-priority" required>
+                            <option value="Низкий">Низкий</option>
+                            <option value="Средний" selected>Средний</option>
+                            <option value="Высокий">Высокий</option>
+                            <option value="Критический">Критический</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Описание (необязательно)</label>
+                        <textarea class="form-control form-textarea" id="inspection-description" placeholder="Дополнительная информация о проверке"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-inspection">Отмена</button>
+                <button class="btn btn-primary" id="save-inspection">Создать проверку</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Данные секторов
         const sectors = [
@@ -791,176 +980,266 @@
         ];
 
         // Данные оборудования с локальными путями к изображениям
-const equipmentList = [
-    { 
-        id: 1, 
-        name: 'Сортировочная машина', 
-        specs: 'Мощность: 15 кВт, Производительность: 120 кг/ч', 
-        img: 'equipment/photoA.png' 
-    },
-    { 
-        id: 2, 
-        name: 'Упаковочный автомат', 
-        specs: 'Мощность: 12 кВт, Производительность: 90 кг/ч', 
-        img: 'equipment/photoB.png' 
-    },
-    { 
-        id: 3, 
-        name: 'Контрольный сканер', 
-        specs: 'Мощность: 20 кВт, Производительность: 150 кг/ч', 
-        img: 'equipment/photoC.png' 
-    },
-    { 
-        id: 4, 
-        name: 'Транспортный конвейер', 
-        specs: 'Мощность: 18 кВт, Производительность: 130 кг/ч', 
-        img: 'equipment/photoD.png' 
-    },
-];
+        const equipmentList = [
+            { 
+                id: 1, 
+                name: 'Сортировочная машина', 
+                specs: 'Мощность: 15 кВт, Производительность: 120 кг/ч', 
+                img: 'equipment/photoA.png' 
+            },
+            { 
+                id: 2, 
+                name: 'Упаковочный автомат', 
+                specs: 'Мощность: 12 кВт, Производительность: 90 кг/ч', 
+                img: 'equipment/photoB.png' 
+            },
+            { 
+                id: 3, 
+                name: 'Контрольный сканер', 
+                specs: 'Мощность: 20 кВт, Производительность: 150 кг/ч', 
+                img: 'equipment/photoC.png' 
+            },
+            { 
+                id: 4, 
+                name: 'Транспортный конвейер', 
+                specs: 'Мощность: 18 кВт, Производительность: 130 кг/ч', 
+                img: 'equipment/photoD.png' 
+            },
+        ];
 
-let currentSector = null;
+        let currentSector = null;
 
-// Навигация по разделам
-document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', function() {
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        this.classList.add('active');
+        // Навигация по разделам
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
 
-        const view = this.getAttribute('data-view');
-        document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
-        document.getElementById(view).classList.add('active');
+                const view = this.getAttribute('data-view');
+                document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
+                document.getElementById(view).classList.add('active');
 
-        const titles = {
-            dashboard: 'Дашборд проверок',
-            checklists: 'Чек-листы',
-            schedule: 'График проверок',
-            reporting: 'Отчетность',
-            'sectors-map': 'Карта секторов'
-        };
-        document.getElementById('page-title').textContent = titles[view];
+                const titles = {
+                    dashboard: 'Дашборд проверок',
+                    checklists: 'Чек-листы',
+                    schedule: 'График проверок',
+                    reporting: 'Отчетность',
+                    'sectors-map': 'Карта секторов'
+                };
+                document.getElementById('page-title').textContent = titles[view];
 
-        // Если переходим в карту секторов, отображаем основную карту
-        if (view === 'sectors-map') {
-            renderMainMap();
-        }
-    });
-});
+                // Если переходим в карту секторов, отображаем основную карту
+                if (view === 'sectors-map') {
+                    renderMainMap();
+                }
+            });
+        });
 
-// Обработка чекбоксов в чек-листе
-document.querySelectorAll('.checklist-checkbox input').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        const item = this.closest('.checklist-item');
-        if (this.checked) {
-            item.style.opacity = '0.7';
-        } else {
-            item.style.opacity = '1';
-        }
-    });
-});
+        // Обработка чекбоксов в чек-листе
+        document.querySelectorAll('.checklist-checkbox input').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const item = this.closest('.checklist-item');
+                if (this.checked) {
+                    item.style.opacity = '0.7';
+                } else {
+                    item.style.opacity = '1';
+                }
+            });
+        });
 
-// Имитация загрузки данных
-setTimeout(() => {
-    const dashboardStatCards = document.querySelectorAll('#dashboard .stat-card');
-    if (dashboardStatCards.length > 0) {
-        dashboardStatCards[1].querySelector('.stat-value').textContent = '92%';
-        dashboardStatCards[3].querySelector('.stat-value').textContent = '+8%';
-    }
-}, 1500);
+        // Имитация загрузки данных
+        setTimeout(() => {
+            const dashboardStatCards = document.querySelectorAll('#dashboard .stat-card');
+            if (dashboardStatCards.length > 0) {
+                dashboardStatCards[1].querySelector('.stat-value').textContent = '92%';
+                dashboardStatCards[3].querySelector('.stat-value').textContent = '+8%';
+            }
+        }, 1500);
 
-// Функции для работы с картой секторов
-function renderMainMap() {
-    currentSector = null;
-    const container = document.getElementById('sectors-map-content');
-    container.innerHTML = `
-        <div class="container-inner">
-            <h1>Карта секторов производства</h1>
-            <div class="map">
-                ${sectors.map(s => `
-                    <div class="sector"
-                        style="left:${s.x}; top:${s.y}; width:${s.w}; height:${s.h}; background:${s.color};"
-                        onclick="openSector('${s.name}')">
-                        Сектор ${s.name}<br>KPI: ${s.kpi}
+        // Функции для работы с картой секторов
+        function renderMainMap() {
+            currentSector = null;
+            const container = document.getElementById('sectors-map-content');
+            container.innerHTML = `
+                <div class="container-inner">
+                    <h1>Карта секторов производства</h1>
+                    <div class="map">
+                        ${sectors.map(s => `
+                            <div class="sector"
+                                style="left:${s.x}; top:${s.y}; width:${s.w}; height:${s.h}; background:${s.color};"
+                                onclick="openSector('${s.name}')">
+                                Сектор ${s.name}<br>KPI: ${s.kpi}
+                            </div>
+                        `).join('')}
                     </div>
-                `).join('')}
-            </div>
-            <p style="text-align: center; margin-top: 20px; color: #666;">
-                Нажмите на сектор для просмотра детальной информации и оборудования
-            </p>
-        </div>
-    `;
-}
-
-function openSector(name) {
-    currentSector = name;
-    const s = sectors.find(sec => sec.name === name);
-    const container = document.getElementById('sectors-map-content');
-    container.innerHTML = `
-        <div class="container-inner">
-            <button class="back-btn" onclick="renderMainMap()">
-                <i class="fas fa-arrow-left"></i> Назад к карте
-            </button>
-            <h1>Сектор ${s.name}</h1>
-            <div class="stats-cards">
-                <div class="stat-card">
-                    <i class="fas fa-chart-line"></i>
-                    <div class="stat-value">${s.kpi}</div>
-                    <div class="stat-label">KPI сектора</div>
+                    <p style="text-align: center; margin-top: 20px; color: #666;">
+                        Нажмите на сектор для просмотра детальной информации и оборудования
+                    </p>
                 </div>
-                <div class="stat-card">
-                    <i class="fas fa-check-circle"></i>
-                    <div class="stat-value">95%</div>
-                    <div class="stat-label">Выполнение плана</div>
+            `;
+        }
+
+        function openSector(name) {
+            currentSector = name;
+            const s = sectors.find(sec => sec.name === name);
+            const container = document.getElementById('sectors-map-content');
+            container.innerHTML = `
+                <div class="container-inner">
+                    <button class="back-btn" onclick="renderMainMap()">
+                        <i class="fas fa-arrow-left"></i> Назад к карте
+                    </button>
+                    <h1>Сектор ${s.name}</h1>
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <i class="fas fa-chart-line"></i>
+                            <div class="stat-value">${s.kpi}</div>
+                            <div class="stat-label">KPI сектора</div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-check-circle"></i>
+                            <div class="stat-value">95%</div>
+                            <div class="stat-label">Выполнение плана</div>
+                        </div>
+                    </div>
+                    <p><b>Описание:</b> ${s.description}</p>
+                    <h3 style="margin-top: 30px;">Карта оборудования</h3>
+                    <div class="equipment-map" id="equipment-map"></div>
                 </div>
-            </div>
-            <p><b>Описание:</b> ${s.description}</p>
-            <h3 style="margin-top: 30px;">Карта оборудования</h3>
-            <div class="equipment-map" id="equipment-map"></div>
-        </div>
-    `;
+            `;
 
-    const map = document.getElementById('equipment-map');
-    
-    // Создаем случайное распределение оборудования
-    const equipmentCount = 8;
-    for (let i = 0; i < equipmentCount; i++) {
-        const dot = document.createElement('div');
-        dot.className = 'dot';
-        dot.style.left = Math.random() * 90 + '%';
-        dot.style.top = Math.random() * 85 + '%';
-        
-        // Случайно выбираем оборудование из списка
-        const randomEquipment = equipmentList[Math.floor(Math.random() * equipmentList.length)];
-        dot.onclick = () => openEquipment(randomEquipment);
-        
-        map.appendChild(dot);
-    }
-}
+            const map = document.getElementById('equipment-map');
+            
+            // Создаем случайное распределение оборудования
+            const equipmentCount = 8;
+            for (let i = 0; i < equipmentCount; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.style.left = Math.random() * 90 + '%';
+                dot.style.top = Math.random() * 85 + '%';
+                
+                // Случайно выбираем оборудование из списка
+                const randomEquipment = equipmentList[Math.floor(Math.random() * equipmentList.length)];
+                dot.onclick = () => openEquipment(randomEquipment);
+                
+                map.appendChild(dot);
+            }
+        }
 
-function openEquipment(eq) {
-    const container = document.getElementById('sectors-map-content');
-    container.innerHTML = `
-        <div class="container-inner">
-            <button class="back-btn" onclick="openSector('${currentSector}')">
-                <i class="fas fa-arrow-left"></i> Назад к сектору ${currentSector}
-            </button>
-            <h1>${eq.name}</h1>
-            <div class="equipment-details">
-                <p><b>Характеристики:</b> ${eq.specs}</p>
-                <p><b>Статус:</b> <span class="status-badge status-completed">Активен</span></p>
-                <p><b>Последняя проверка:</b> 15.10.2023</p>
-            </div>
-            <h3>Фото оборудования</h3>
-            <img src="${eq.img}" class="equipment-photo" alt="оборудование">
-        </div>
-    `;
-}
+        function openEquipment(eq) {
+            const container = document.getElementById('sectors-map-content');
+            container.innerHTML = `
+                <div class="container-inner">
+                    <button class="back-btn" onclick="openSector('${currentSector}')">
+                        <i class="fas fa-arrow-left"></i> Назад к сектору ${currentSector}
+                    </button>
+                    <h1>${eq.name}</h1>
+                    <div class="equipment-details">
+                        <p><b>Характеристики:</b> ${eq.specs}</p>
+                        <p><b>Статус:</b> <span class="status-badge status-completed">Активен</span></p>
+                        <p><b>Последняя проверка:</b> 15.10.2023</p>
+                    </div>
+                    <h3>Фото оборудования</h3>
+                    <img src="${eq.img}" class="equipment-photo" alt="оборудование">
+                </div>
+            `;
+        }
 
-// Инициализация карты секторов при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-    renderMainMap();
-});
+        // Функционал для модального окна новой проверки
+        const newInspectionBtn = document.getElementById('new-inspection-btn');
+        const newInspectionModal = document.getElementById('new-inspection-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const cancelInspectionBtn = document.getElementById('cancel-inspection');
+        const saveInspectionBtn = document.getElementById('save-inspection');
+        const newInspectionForm = document.getElementById('new-inspection-form');
+
+        // Открытие модального окна
+        newInspectionBtn.addEventListener('click', function() {
+            newInspectionModal.classList.add('active');
+            // Устанавливаем сегодняшнюю дату как дату по умолчанию
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('inspection-date').value = today;
+        });
+
+        // Закрытие модального окна
+        function closeModal() {
+            newInspectionModal.classList.remove('active');
+            newInspectionForm.reset();
+        }
+
+        closeModalBtn.addEventListener('click', closeModal);
+        cancelInspectionBtn.addEventListener('click', closeModal);
+
+        // Сохранение новой проверки
+        saveInspectionBtn.addEventListener('click', function() {
+            // Проверяем валидность формы
+            if (!newInspectionForm.checkValidity()) {
+                alert('Пожалуйста, заполните все обязательные поля');
+                return;
+            }
+
+            // Собираем данные формы
+            const inspectionData = {
+                name: document.getElementById('inspection-name').value,
+                sector: document.getElementById('inspection-sector').value,
+                date: document.getElementById('inspection-date').value,
+                inspector: document.getElementById('inspection-inspector').value,
+                checklist: document.getElementById('inspection-checklist').value,
+                priority: document.getElementById('inspection-priority').value,
+                description: document.getElementById('inspection-description').value,
+                status: 'Запланирована'
+            };
+
+            // Форматируем дату для отображения
+            const formattedDate = formatDate(inspectionData.date);
+
+            // Добавляем новую проверку в таблицу
+            const tableBody = document.getElementById('inspections-table-body');
+            const newRow = document.createElement('tr');
+            
+            newRow.innerHTML = `
+                <td>${inspectionData.sector}</td>
+                <td>${formattedDate}</td>
+                <td>${inspectionData.inspector}</td>
+                <td><span class="status-badge status-pending">${inspectionData.status}</span></td>
+                <td>
+                    <button class="action-btn"><i class="fas fa-play"></i></button>
+                    <button class="action-btn"><i class="fas fa-edit"></i></button>
+                </td>
+            `;
+            
+            // Вставляем новую строку в начало таблицы
+            tableBody.insertBefore(newRow, tableBody.firstChild);
+
+            // Обновляем счетчик проверок
+            updateInspectionCounter();
+
+            // Закрываем модальное окно
+            closeModal();
+
+            // Показываем уведомление об успехе
+            alert(`Проверка "${inspectionData.name}" успешно создана!`);
+        });
+
+        // Функция для форматирования даты
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}.${month}.${year}`;
+        }
+
+        // Функция для обновления счетчика проверок
+        function updateInspectionCounter() {
+            const statValue = document.querySelector('#dashboard .stats-cards .stat-card:first-child .stat-value');
+            const currentCount = parseInt(statValue.textContent);
+            statValue.textContent = currentCount + 1;
+        }
+
+        // Инициализация карты секторов при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMainMap();
+        });
     </script>
 </body>
 </html>
-
-
