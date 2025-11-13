@@ -327,6 +327,11 @@
             margin-top: 5px;
             font-size: 0.8rem;
         }
+
+        .calendar-cell.today {
+            background-color: rgba(229, 207, 96, 0.3);
+            border: 2px solid var(--secondary);
+        }
         
         .metrics-grid {
             display: grid;
@@ -854,7 +859,7 @@
                 <div class="section">
                     <div class="section-header">
                         <h3 class="section-title">Все чек-листы</h3>
-                        <button class="btn btn-primary"><i class="fas fa-plus"></i> Создать чек-лист</button>
+                        <button class="btn btn-primary" id="create-checklist-btn"><i class="fas fa-plus"></i> Создать чек-лист</button>
                     </div>
                     <div class="checklist">
                         <div class="checklist-item">
@@ -891,7 +896,7 @@
                 <div class="section">
                     <div class="section-header">
                         <h3 class="section-title">Календарь проверок</h3>
-                        <button class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Добавить проверку</button>
+                        <button class="btn btn-primary" id="add-schedule-inspection-btn"><i class="fas fa-calendar-plus"></i> Добавить проверку</button>
                     </div>
                     <div class="calendar">
                         <div class="calendar-header">
@@ -1037,6 +1042,32 @@
         </div>
     </div>
 
+    <!-- Модальное окно для создания нового чек-листа -->
+    <div class="modal-overlay" id="new-checklist-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Создание нового чек-листа</h3>
+                <button class="modal-close" id="close-checklist-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="new-checklist-form">
+                    <div class="form-group">
+                        <label class="form-label">Название чек-листа</label>
+                        <input type="text" class="form-control" id="checklist-name" placeholder="Введите название чек-листа" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control form-textarea" id="checklist-description" placeholder="Описание чек-листа"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-checklist">Отмена</button>
+                <button class="btn btn-primary" id="save-checklist">Создать чек-лист</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Данные для графика нарушений
         const violationData = {
@@ -1132,6 +1163,10 @@
                 if (view === 'reporting') {
                     renderViolationsChart();
                 }
+                // Если переходим в график проверок, отображаем календарь
+                if (view === 'schedule') {
+                    renderCalendar();
+                }
             });
         });
 
@@ -1160,6 +1195,23 @@
             } else {
                 actionsCell.innerHTML = `
                     <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                `;
+            }
+        }
+
+        // Функция для обновления действий чек-листа на основе чекбокса
+        function updateChecklistActions(item) {
+            const checkbox = item.querySelector('.checklist-checkbox input');
+            const actions = item.querySelector('.checklist-actions');
+            if (checkbox.checked) {
+                actions.innerHTML = `
+                    <button class="action-btn view-checklist"><i class="fas fa-eye"></i> Просмотр</button>
+                    <button class="action-btn stats-checklist"><i class="fas fa-chart-bar"></i> Статистика</button>
+                `;
+            } else {
+                actions.innerHTML = `
+                    <button class="action-btn start-checklist"><i class="fas fa-play"></i> Начать</button>
+                    <button class="action-btn edit-checklist"><i class="fas fa-edit"></i> Редактировать</button>
                 `;
             }
         }
@@ -1310,6 +1362,75 @@
             });
         }
 
+        // Функция для отображения календаря проверок
+        function renderCalendar() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
+            let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // Monday first
+
+            // Собираем события из таблицы проверок
+            const events = {};
+            const tableBody = document.getElementById('inspections-table-body');
+            const rows = tableBody.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const dateStr = cells[2].textContent.trim(); // dd.mm.yyyy
+                const sector = cells[1].textContent.trim();
+                const dateParts = dateStr.split('.');
+                if (dateParts.length === 3) {
+                    const day = parseInt(dateParts[0]);
+                    const eventMonth = parseInt(dateParts[1]) - 1; // 0-based
+                    const eventYear = parseInt(dateParts[2]);
+                    if (eventMonth === month && eventYear === year) {
+                        if (!events[day]) events[day] = [];
+                        events[day].push(sector);
+                    }
+                }
+            });
+
+            const container = document.querySelector('#schedule .calendar');
+            let html = `
+                <div class="calendar-header">
+                    <div class="calendar-day">Пн</div>
+                    <div class="calendar-day">Вт</div>
+                    <div class="calendar-day">Ср</div>
+                    <div class="calendar-day">Чт</div>
+                    <div class="calendar-day">Пт</div>
+                    <div class="calendar-day">Сб</div>
+                    <div class="calendar-day">Вс</div>
+                </div>
+            `;
+
+            let day = 1;
+            for (let week = 0; week < 6; week++) {
+                for (let wd = 0; wd < 7; wd++) {
+                    if (week === 0 && wd < startOffset) {
+                        html += '<div class="calendar-cell"></div>';
+                    } else if (day <= daysInMonth) {
+                        const isToday = day === now.getDate() && month === now.getMonth() && year === now.getFullYear();
+                        const className = isToday ? 'calendar-cell today' : 'calendar-cell';
+                        let eventHtml = '';
+                        if (events[day]) {
+                            events[day].forEach(sector => {
+                                eventHtml += `<div class="calendar-event">${sector}</div>`;
+                            });
+                        }
+                        html += `<div class="${className}"><div class="calendar-date">${day}</div>${eventHtml}</div>`;
+                        day++;
+                    } else {
+                        html += '<div class="calendar-cell"></div>';
+                    }
+                }
+                if (day > daysInMonth) break;
+            }
+            container.innerHTML = html;
+        }
+
         // Функционал для модального окна новой проверки
         const newInspectionBtn = document.getElementById('new-inspection-btn');
         const newInspectionModal = document.getElementById('new-inspection-modal');
@@ -1317,6 +1438,20 @@
         const cancelInspectionBtn = document.getElementById('cancel-inspection');
         const saveInspectionBtn = document.getElementById('save-inspection');
         const newInspectionForm = document.getElementById('new-inspection-form');
+
+        // Функционал для модального окна нового чек-листа
+        const newChecklistBtn = document.getElementById('create-checklist-btn');
+        const newChecklistModal = document.getElementById('new-checklist-modal');
+        const closeChecklistModalBtn = document.getElementById('close-checklist-modal');
+        const cancelChecklistBtn = document.getElementById('cancel-checklist');
+        const saveChecklistBtn = document.getElementById('save-checklist');
+        const newChecklistForm = document.getElementById('new-checklist-form');
+
+        // Кнопка добавления проверки в графике
+        const addScheduleInspectionBtn = document.getElementById('add-schedule-inspection-btn');
+        addScheduleInspectionBtn.addEventListener('click', function() {
+            newInspectionModal.classList.add('active');
+        });
 
         // Открытие модального окна
         newInspectionBtn.addEventListener('click', function() {
@@ -1421,6 +1556,11 @@
                 updateStats();
                 closeModal();
                 alert(`Проверка "${inspectionData.name}" успешно обновлена!`);
+
+                // Обновляем календарь если находимся в разделе графика
+                if (document.getElementById('schedule').classList.contains('active')) {
+                    renderCalendar();
+                }
             } else {
                 // Добавляем новую проверку в таблицу
                 const tableBody = document.getElementById('inspections-table-body');
@@ -1457,6 +1597,11 @@
 
                 // Показываем уведомление об успехе
                 alert(`Проверка "${inspectionData.name}" успешно создана!`);
+
+                // Обновляем календарь если находимся в разделе графика
+                if (document.getElementById('schedule').classList.contains('active')) {
+                    renderCalendar();
+                }
             }
         });
 
@@ -1474,10 +1619,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             renderMainMap();
             updateStats();
-            // Обновляем действия для всех строк
+            // Обновляем действия для всех строк проверок
             const tableBody = document.getElementById('inspections-table-body');
             const rows = tableBody.querySelectorAll('tr');
             rows.forEach(updateRowActions);
+            // Обновляем действия для чек-листов
+            const checklistItems = document.querySelectorAll('.checklist-item');
+            checklistItems.forEach(updateChecklistActions);
         });
 
         // Обработчик кликов для изменения статуса (переключатель)
@@ -1522,6 +1670,84 @@
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Отчет проверки');
                 XLSX.writeFile(wb, `Отчет_${inspectionData['Название проверки'].replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
+            }
+        });
+
+        // Обработчик для чекбоксов чек-листов
+        document.addEventListener('change', function(e) {
+            if (e.target.matches('.checklist-checkbox input')) {
+                const item = e.target.closest('.checklist-item');
+                updateChecklistActions(item);
+            }
+        });
+
+        // Функционал для модального окна нового чек-листа
+        newChecklistBtn.addEventListener('click', function() {
+            newChecklistModal.classList.add('active');
+        });
+
+        function closeChecklistModal() {
+            newChecklistModal.classList.remove('active');
+            newChecklistForm.reset();
+        }
+
+        closeChecklistModalBtn.addEventListener('click', closeChecklistModal);
+        cancelChecklistBtn.addEventListener('click', closeChecklistModal);
+
+        saveChecklistBtn.addEventListener('click', function() {
+            if (!newChecklistForm.checkValidity()) {
+                alert('Пожалуйста, заполните название чек-листа');
+                return;
+            }
+
+            const checklistData = {
+                name: document.getElementById('checklist-name').value,
+                description: document.getElementById('checklist-description').value
+            };
+
+            // Добавляем новый чек-лист в список
+            const checklistContainer = document.querySelector('#checklists .checklist');
+            const newItem = document.createElement('div');
+            newItem.className = 'checklist-item';
+            newItem.innerHTML = `
+                <div class="checklist-checkbox">
+                    <input type="checkbox">
+                </div>
+                <div class="checklist-content">
+                    <div class="checklist-title">${checklistData.name}</div>
+                    <div class="checklist-description">${checklistData.description || 'Описание не указано'}</div>
+                    <div class="checklist-actions">
+                        <button class="action-btn start-checklist"><i class="fas fa-play"></i> Начать</button>
+                        <button class="action-btn edit-checklist"><i class="fas fa-edit"></i> Редактировать</button>
+                    </div>
+                </div>
+            `;
+
+            checklistContainer.appendChild(newItem);
+            updateChecklistActions(newItem);
+
+            closeChecklistModal();
+            alert(`Чек-лист "${checklistData.name}" успешно создан!`);
+        });
+
+        // Обработчики для кнопок чек-листов
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.start-checklist')) {
+                const item = e.target.closest('.checklist-item');
+                const title = item.querySelector('.checklist-title').textContent.trim();
+                alert(`Начать чек-лист: ${title}`);
+            } else if (e.target.closest('.edit-checklist')) {
+                const item = e.target.closest('.checklist-item');
+                const title = item.querySelector('.checklist-title').textContent.trim();
+                alert(`Редактировать чек-лист: ${title}`);
+            } else if (e.target.closest('.view-checklist')) {
+                const item = e.target.closest('.checklist-item');
+                const title = item.querySelector('.checklist-title').textContent.trim();
+                alert(`Просмотр чек-листа: ${title}`);
+            } else if (e.target.closest('.stats-checklist')) {
+                const item = e.target.closest('.checklist-item');
+                const title = item.querySelector('.checklist-title').textContent.trim();
+                alert(`Статистика чек-листа: ${title}`);
             }
         });
 
