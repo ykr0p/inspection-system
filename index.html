@@ -6,6 +6,8 @@
     <title>Система управления проверками</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         /* Все предыдущие стили остаются без изменений */
         * {
@@ -606,6 +608,36 @@
             background: #e5e5e5;
         }
 
+        /* Стили для приоритетов */
+        .priority-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .priority-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .priority-low {
+            background-color: #2ecc71;
+        }
+
+        .priority-medium {
+            background-color: #f39c12;
+        }
+
+        .priority-high {
+            background-color: #e74c3c;
+        }
+
+        .priority-critical {
+            background-color: #9b59b6;
+        }
+
         @media (max-width: 992px) {
             .dashboard {
                 flex-direction: column;
@@ -625,6 +657,14 @@
             .stats-cards {
                 grid-template-columns: 1fr 1fr;
             }
+            
+            .table-responsive {
+                font-size: 0.9rem;
+            }
+            
+            th, td {
+                padding: 8px 10px;
+            }
         }
         
         @media (max-width: 576px) {
@@ -640,6 +680,14 @@
 
             .sectors-map-actions {
                 flex-direction: column;
+            }
+            
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+            
+            th, td {
+                padding: 6px 8px;
             }
         }
     </style>
@@ -701,42 +749,63 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th>Название проверки</th>
                                     <th>Участок</th>
                                     <th>Дата</th>
                                     <th>Проверяющий</th>
+                                    <th>Приоритет</th>
                                     <th>Статус</th>
                                     <th>Действия</th>
                                 </tr>
                             </thead>
                             <tbody id="inspections-table-body">
                                 <tr>
+                                    <td>Проверка оборудования на инструментальном участке</td>
                                     <td>Инструментальный участок</td>
                                     <td>15.10.2023</td>
                                     <td>Петрова А.С.</td>
+                                    <td>
+                                        <div class="priority-indicator">
+                                            <span class="priority-dot priority-high"></span>
+                                            Высокий
+                                        </div>
+                                    </td>
                                     <td><span class="status-badge status-pending">Запланирована</span></td>
                                     <td>
-                                        <button class="action-btn"><i class="fas fa-play"></i></button>
-                                        <button class="action-btn"><i class="fas fa-edit"></i></button>
+                                        <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
                                     </td>
                                 </tr>
                                 <tr>
+                                    <td>Проверка чистоты на сборном участке</td>
                                     <td>Сборный участок</td>
                                     <td>16.10.2023</td>
                                     <td>Сидоров В.К.</td>
+                                    <td>
+                                        <div class="priority-indicator">
+                                            <span class="priority-dot priority-medium"></span>
+                                            Средний
+                                        </div>
+                                    </td>
                                     <td><span class="status-badge status-pending">Запланирована</span></td>
                                     <td>
-                                        <button class="action-btn"><i class="fas fa-play"></i></button>
-                                        <button class="action-btn"><i class="fas fa-edit"></i></button>
+                                        <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
                                     </td>
                                 </tr>
                                 <tr>
+                                    <td>Проверка документации СКПГ</td>
                                     <td>Участок производства СКПГ</td>
                                     <td>17.10.2023</td>
                                     <td>Козлова Е.В.</td>
+                                    <td>
+                                        <div class="priority-indicator">
+                                            <span class="priority-dot priority-low"></span>
+                                            Низкий
+                                        </div>
+                                    </td>
                                     <td><span class="status-badge status-completed">Завершена</span></td>
                                     <td>
                                         <button class="action-btn"><i class="fas fa-eye"></i></button>
-                                        <button class="action-btn"><i class="fas fa-file-pdf"></i></button>
+                                        <button class="action-btn"><i class="fas fa-file-excel"></i></button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -871,9 +940,7 @@
                     <div class="metrics-grid">
                         <div class="chart-container">
                             <h4>Тренды нарушений по участкам</h4>
-                            <div class="chart-placeholder">
-                                График трендов нарушений
-                            </div>
+                            <canvas id="violationsChart" width="400" height="200"></canvas>
                         </div>
                         <div class="chart-container">
                             <h4>Топ повторяющихся нарушений</h4>
@@ -951,10 +1018,10 @@
                     <div class="form-group">
                         <label class="form-label">Приоритет</label>
                         <select class="form-select" id="inspection-priority" required>
-                            <option value="Низкий">Низкий</option>
-                            <option value="Средний" selected>Средний</option>
-                            <option value="Высокий">Высокий</option>
-                            <option value="Критический">Критический</option>
+                            <option value="low">Низкий</option>
+                            <option value="medium" selected>Средний</option>
+                            <option value="high">Высокий</option>
+                            <option value="critical">Критический</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -971,6 +1038,34 @@
     </div>
 
     <script>
+        // Данные для графика нарушений
+        const violationData = {
+            labels: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь'],
+            datasets: [
+                {
+                    label: 'Инструментальный участок',
+                    data: [5, 3, 8, 2, 6, 4],
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Сборный участок',
+                    data: [3, 7, 4, 9, 2, 5],
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Участок СКПГ',
+                    data: [2, 4, 6, 3, 8, 1],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }
+            ]
+        };
+
         // Данные секторов
         const sectors = [
             { name: 'A', kpi: 4.7, color: '#2ecc71', x: '5%', y: '10%', w: '40%', h: '45%', description: 'Первичная обработка сырья: сортировка, очистка, измельчение.' },
@@ -1008,6 +1103,7 @@
         ];
 
         let currentSector = null;
+        let editingRow = null;
 
         // Навигация по разделам
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -1032,6 +1128,10 @@
                 if (view === 'sectors-map') {
                     renderMainMap();
                 }
+                // Если переходим в отчетность, отображаем график нарушений
+                if (view === 'reporting') {
+                    renderViolationsChart();
+                }
             });
         });
 
@@ -1047,14 +1147,53 @@
             });
         });
 
-        // Имитация загрузки данных
-        setTimeout(() => {
-            const dashboardStatCards = document.querySelectorAll('#dashboard .stat-card');
-            if (dashboardStatCards.length > 0) {
-                dashboardStatCards[1].querySelector('.stat-value').textContent = '92%';
-                dashboardStatCards[3].querySelector('.stat-value').textContent = '+8%';
+        // Функция для обновления действий в строке на основе статуса
+        function updateRowActions(row) {
+            const statusCell = row.cells[5];
+            const status = statusCell.textContent.trim();
+            const actionsCell = row.cells[6];
+            if (status === 'Завершена') {
+                actionsCell.innerHTML = `
+                    <button class="action-btn"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn"><i class="fas fa-file-excel"></i></button>
+                `;
+            } else {
+                actionsCell.innerHTML = `
+                    <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                `;
             }
-        }, 1500);
+        }
+
+        // Функция для обновления статистики на основе предстоящих проверок
+        function updateStats() {
+            const tableBody = document.getElementById('inspections-table-body');
+            const rows = tableBody.querySelectorAll('tr');
+            let total = rows.length;
+            let completed = 0;
+            let critical = 0;
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const status = cells[5].textContent.trim();
+                const priorityIndicator = cells[4].querySelector('.priority-indicator');
+                const priorityText = priorityIndicator ? priorityIndicator.textContent.trim() : '';
+
+                if (status === 'Завершена') completed++;
+                if (priorityText === 'Критический') critical++;
+            });
+
+            const executionPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
+            const improvementPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            // Обновляем карточки статистики
+            const statCards = document.querySelectorAll('#dashboard .stat-card .stat-value');
+            if (statCards.length >= 4) {
+                statCards[0].textContent = total; // Проверок за месяц
+                statCards[1].textContent = executionPercent + '%'; // Выполнение графика
+                statCards[2].textContent = critical; // Критических нарушений
+                statCards[3].textContent = '+' + improvementPercent + '%'; // Улучшение за месяц
+            }
+        }
 
         // Функции для работы с картой секторов
         function renderMainMap() {
@@ -1144,6 +1283,33 @@
             `;
         }
 
+        // Функция для отображения графика нарушений
+        function renderViolationsChart() {
+            const ctx = document.getElementById('violationsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: violationData,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Тренды нарушений по участкам'
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
         // Функционал для модального окна новой проверки
         const newInspectionBtn = document.getElementById('new-inspection-btn');
         const newInspectionModal = document.getElementById('new-inspection-modal');
@@ -1154,6 +1320,8 @@
 
         // Открытие модального окна
         newInspectionBtn.addEventListener('click', function() {
+            editingRow = null;
+            document.querySelector('.modal-title').textContent = 'Создание новой проверки';
             newInspectionModal.classList.add('active');
             // Устанавливаем сегодняшнюю дату как дату по умолчанию
             const today = new Date().toISOString().split('T')[0];
@@ -1164,12 +1332,46 @@
         function closeModal() {
             newInspectionModal.classList.remove('active');
             newInspectionForm.reset();
+            editingRow = null;
         }
 
         closeModalBtn.addEventListener('click', closeModal);
         cancelInspectionBtn.addEventListener('click', closeModal);
 
-        // Сохранение новой проверки
+        // Функция для получения текстового представления приоритета
+        function getPriorityText(priorityValue) {
+            const priorityMap = {
+                'low': 'Низкий',
+                'medium': 'Средний',
+                'high': 'Высокий',
+                'critical': 'Критический'
+            };
+            return priorityMap[priorityValue] || 'Средний';
+        }
+
+        // Функция для получения класса приоритета
+        function getPriorityClass(priorityValue) {
+            const priorityClassMap = {
+                'low': 'priority-low',
+                'medium': 'priority-medium',
+                'high': 'priority-high',
+                'critical': 'priority-critical'
+            };
+            return priorityClassMap[priorityValue] || 'priority-medium';
+        }
+
+        // Функция для получения значения приоритета из текста
+        function getPriorityValue(text) {
+            const map = {
+                'Низкий': 'low',
+                'Средний': 'medium',
+                'Высокий': 'high',
+                'Критический': 'critical'
+            };
+            return map[text] || 'medium';
+        }
+
+        // Сохранение проверки
         saveInspectionBtn.addEventListener('click', function() {
             // Проверяем валидность формы
             if (!newInspectionForm.checkValidity()) {
@@ -1192,32 +1394,70 @@
             // Форматируем дату для отображения
             const formattedDate = formatDate(inspectionData.date);
 
-            // Добавляем новую проверку в таблицу
-            const tableBody = document.getElementById('inspections-table-body');
-            const newRow = document.createElement('tr');
-            
-            newRow.innerHTML = `
-                <td>${inspectionData.sector}</td>
-                <td>${formattedDate}</td>
-                <td>${inspectionData.inspector}</td>
-                <td><span class="status-badge status-pending">${inspectionData.status}</span></td>
-                <td>
-                    <button class="action-btn"><i class="fas fa-play"></i></button>
-                    <button class="action-btn"><i class="fas fa-edit"></i></button>
-                </td>
-            `;
-            
-            // Вставляем новую строку в начало таблицы
-            tableBody.insertBefore(newRow, tableBody.firstChild);
+            // Получаем текстовое представление приоритета и класс для стилизации
+            const priorityText = getPriorityText(inspectionData.priority);
+            const priorityClass = getPriorityClass(inspectionData.priority);
 
-            // Обновляем счетчик проверок
-            updateInspectionCounter();
+            if (editingRow) {
+                // Обновляем существующую строку
+                editingRow.innerHTML = `
+                    <td>${inspectionData.name}</td>
+                    <td>${inspectionData.sector}</td>
+                    <td>${formattedDate}</td>
+                    <td>${inspectionData.inspector}</td>
+                    <td>
+                        <div class="priority-indicator">
+                            <span class="priority-dot ${priorityClass}"></span>
+                            ${priorityText}
+                        </div>
+                    </td>
+                    <td><span class="status-badge status-pending">${inspectionData.status}</span></td>
+                    <td>
+                        <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                    </td>
+                `;
+                editingRow = null;
+                updateRowActions(editingRow);
+                updateStats();
+                closeModal();
+                alert(`Проверка "${inspectionData.name}" успешно обновлена!`);
+            } else {
+                // Добавляем новую проверку в таблицу
+                const tableBody = document.getElementById('inspections-table-body');
+                const newRow = document.createElement('tr');
+                
+                newRow.innerHTML = `
+                    <td>${inspectionData.name}</td>
+                    <td>${inspectionData.sector}</td>
+                    <td>${formattedDate}</td>
+                    <td>${inspectionData.inspector}</td>
+                    <td>
+                        <div class="priority-indicator">
+                            <span class="priority-dot ${priorityClass}"></span>
+                            ${priorityText}
+                        </div>
+                    </td>
+                    <td><span class="status-badge status-pending">${inspectionData.status}</span></td>
+                    <td>
+                        <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                    </td>
+                `;
+                
+                // Вставляем новую строку в начало таблицы
+                tableBody.insertBefore(newRow, tableBody.firstChild);
 
-            // Закрываем модальное окно
-            closeModal();
+                // Обновляем действия для новой строки
+                updateRowActions(newRow);
 
-            // Показываем уведомление об успехе
-            alert(`Проверка "${inspectionData.name}" успешно создана!`);
+                // Обновляем статистику
+                updateStats();
+
+                // Закрываем модальное окно
+                closeModal();
+
+                // Показываем уведомление об успехе
+                alert(`Проверка "${inspectionData.name}" успешно создана!`);
+            }
         });
 
         // Функция для форматирования даты
@@ -1229,17 +1469,100 @@
             return `${day}.${month}.${year}`;
         }
 
-        // Функция для обновления счетчика проверок
-        function updateInspectionCounter() {
-            const statValue = document.querySelector('#dashboard .stats-cards .stat-card:first-child .stat-value');
-            const currentCount = parseInt(statValue.textContent);
-            statValue.textContent = currentCount + 1;
-        }
 
         // Инициализация карты секторов при загрузке
         document.addEventListener('DOMContentLoaded', function() {
             renderMainMap();
+            updateStats();
+            // Обновляем действия для всех строк
+            const tableBody = document.getElementById('inspections-table-body');
+            const rows = tableBody.querySelectorAll('tr');
+            rows.forEach(updateRowActions);
         });
+
+        // Обработчик кликов для изменения статуса (переключатель)
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.status-badge')) {
+                const badge = e.target.closest('.status-badge');
+                const cell = badge.parentElement;
+                const currentStatus = badge.textContent.trim();
+                const newStatus = currentStatus === 'Завершена' ? 'Запланирована' : 'Завершена';
+                const statusClass = newStatus === 'Завершена' ? 'status-completed' : 'status-pending';
+                cell.innerHTML = `<span class="status-badge ${statusClass}">${newStatus}</span>`;
+                // Обновляем действия
+                const row = cell.closest('tr');
+                updateRowActions(row);
+                // Обновляем статистику
+                updateStats();
+            } else if (e.target.closest('.fa-file-excel')) {
+                const btn = e.target.closest('.fa-file-excel');
+                const row = btn.closest('tr');
+                const cells = row.querySelectorAll('td');
+                const inspectionData = {
+                    'Название проверки': cells[0].textContent.trim(),
+                    'Участок': cells[1].textContent.trim(),
+                    'Дата': cells[2].textContent.trim(),
+                    'Проверяющий': cells[3].textContent.trim(),
+                    'Приоритет': cells[4].textContent.trim(),
+                    'Статус': cells[5].textContent.trim()
+                };
+
+                // Создаем данные для Excel
+                const data = [
+                    ['Параметр', 'Значение'],
+                    ['Название проверки', inspectionData['Название проверки']],
+                    ['Участок', inspectionData['Участок']],
+                    ['Дата', inspectionData['Дата']],
+                    ['Проверяющий', inspectionData['Проверяющий']],
+                    ['Приоритет', inspectionData['Приоритет']],
+                    ['Статус', inspectionData['Статус']]
+                ];
+
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Отчет проверки');
+                XLSX.writeFile(wb, `Отчет_${inspectionData['Название проверки'].replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
+            }
+        });
+
+        // Обработчик кликов для кнопок редактирования
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.edit-btn')) {
+                const btn = e.target.closest('.edit-btn');
+                const tr = btn.closest('tr');
+                editInspection(tr);
+            }
+        });
+
+        // Функция для редактирования проверки
+        function editInspection(tr) {
+            editingRow = tr;
+            const cells = tr.querySelectorAll('td');
+            const name = cells[0].textContent.trim();
+            const sector = cells[1].textContent.trim();
+            const dateStr = cells[2].textContent.trim();
+            const inspector = cells[3].textContent.trim();
+            const priorityDiv = cells[4].querySelector('.priority-indicator');
+            const priorityText = priorityDiv ? priorityDiv.textContent.trim().split(' ')[1] : 'Средний';
+            const priorityValue = getPriorityValue(priorityText);
+
+            // Заполнить форму
+            document.getElementById('inspection-name').value = name;
+            document.getElementById('inspection-sector').value = sector;
+            const dateParts = dateStr.split('.');
+            if (dateParts.length === 3) {
+                const date = `${dateParts[2]}-${dateParts[1].padStart(2,'0')}-${dateParts[0].padStart(2,'0')}`;
+                document.getElementById('inspection-date').value = date;
+            }
+            document.getElementById('inspection-inspector').value = inspector;
+            document.getElementById('inspection-priority').value = priorityValue;
+
+            // Изменить title
+            document.querySelector('.modal-title').textContent = 'Редактирование проверки';
+
+            // Открыть модал
+            newInspectionModal.classList.add('active');
+        }
     </script>
 </body>
 </html>
